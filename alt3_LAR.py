@@ -29,7 +29,7 @@ def alt3_folder_LAR(input_folder, nb_stops_by_trips, beta_ini, beta_inter, epsil
     # Chemin et nom du fichier d'output des résultats
     output_file_name = output_folder + "/" +output_folder[output_folder.rfind("/")+1:] + \
                        "_alt3_nb" + str(nb_stops_by_trips) + \
-                       + "_bi" + str(beta_ini) + "_bint" + str(beta_inter) + \
+                       "_bi" + str(beta_ini) + "_bint" + str(beta_inter) + \
                        "_e" + str(math.log10(epsilon)) + "_ms" + str(max_steps)
     # Exécution du modèle selon les inputs désirés
     alt3_LAR(prod_file, attr_file, costs_file, nb_stops_by_trips, beta_ini, beta_inter, epsilon, max_steps, output_file_name, input_folder[input_folder.rfind("/")+1:]+"_LAR")
@@ -45,24 +45,34 @@ def alt3_LAR(prod_file, attr_file, costs_file, nb_stops_by_trips, beta_ini, beta
     N=np.shape(costs)[0]
 
     # initialize the matrices for initial, intermediary and final trips
+    demand=np.zeros((N,N)) # in alternative 3, it is an output only, not an input
     initial_trips=np.zeros((N,N))
     intermediate_trips=np.zeros((N,N))
-    final_trips=np.zeros((N,N))
     
     # Trajets initiaux
-    initial_trips_from_o=np.multiply(np.exp(-beta_ini*costs[o,:]),demand[o,:])
-    initial_trips_from_o = tools.Furness_LAR(initial_trips_from_o, demand[o,:], np.sum(demand[o,:]) / nb_stops_by_trips, True, False, epsilon, max_steps)
-    initial_trips[o,:]=initial_trips_from_o
+    initial_trips=np.exp(-beta_ini*costs)
+    initial_trips = tools.Furness_LAR(initial_trips, attractions, productions / nb_stops_by_trips, True, False, epsilon, max_steps)
+    demand=demand+initial_trips
+ 
+    # Trajets intermédiaires # defined only because the post_processing function requires it, but it is not used by Alternative 3.
+    current_positions=np.sum(initial_trips,axis=0)
+    relation_to_origins=initial_trips # the value (i,j) says how many vehicles have origin i and are currently in j. After iterating over all ranks of intermediate trips, the matrix of return trips is simply the transpose of the matrix of relaion_to_origins.
+    for k in range(1,nb_stops_by_trips):
+      # Furness for legs of rank k
+      intermediate_trips_rank_k=tools.Furness_LAR(np.exp(-beta_inter*costs),attractions-np.sum(intermediate_trips+initial_trips,axis=0),current_positions, True, False, epsilon, max_steps)
+      # add them to the previous ones
+      intermediate_trips = intermediate_trips + intermediate_trips_rank_k
+      # update the current positions
+      current_positions=np.sum(intermediate_trips_rank_k,axis=0)
+      # update the current relations to origins
+      matrix_f=np.divide(relation_to_origins,np.matlib.repmat(np.sum(relation_to_origins, axis=0),N,1),out=np.zeros_like(relation_to_origins),where=np.matlib.repmat(np.sum(relation_to_origins, axis=0),N,1)!=0)
+      relation_to_origins=np.matmul(matrix_f,intermediate_trips_rank_k)
 
-    # Trajets intermédiaires
-    for k in range(1,nb_stops_by_trips)
-      savings=tools.calculate_savings_LAR(o,costs)
-      intermediate_trips_from_o=np.multiply(np.exp(-beta_inter*savings),np.matlib.repmat(demand[o,:],N,1).T)
-      intermediate_trips_from_o=tools.Furness_LAR(intermediate_trips_from_o,demand[o,:]-initial_trips_from_o,demand[o,:], False, True, epsilon, max_steps)
-      intermediate_trips = intermediate_trips + intermediate_trips_from_o
-
-      # Trajets finaux
-      final_trips[:,o] = demand[o,:]-np.sum(intermediate_trips_from_o,axis=1) #axis=1: sum over columns (axis=0 for sum over rows)  
+      # update the demand matrix
+      demand=demand+relation_to_origins
+      
+    # Trajets finaux
+    final_trips=relation_to_origins.T
     
     end_time = time.time()
     # Output
