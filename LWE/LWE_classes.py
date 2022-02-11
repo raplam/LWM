@@ -4,6 +4,13 @@
 from dataclasses import dataclass
  
 @dataclass
+class SummaryStatistics:
+    nb_reconstructed_tours: int=0
+    nb_simplified_tours: int=0
+    nb_legs: int=0
+    nb_shipments: int=0
+
+@dataclass
 class SimplifiedTour:
     # Class for describing simplified tours, in the sense of tours for which the LWE data only contains summarizing information (when the tour is too int and in a sufficiently small radius)
     wg: int
@@ -118,7 +125,7 @@ class Survey:
     def __init__(self, oid:  int, weight:  float, strata:  int, main_use_empty_journey: bool, 
                  main_use_goods_transport: bool, main_use_other: bool, main_use_passenger: bool,
                  main_use_private: bool, main_use_rental: bool, main_use_service: bool, curb_weight:  int,
-                 load_capa:  int):
+                 load_capa:  int, noga: int):
         self.oid=oid
         self.weight=weight
         self.strata=strata
@@ -131,6 +138,7 @@ class Survey:
         self.main_use_service=main_use_service
         self.curb_weight=curb_weight
         self.load_capa=load_capa
+        self.noga=noga
         self.stop_dict={}
         self.leg_list= []
         self.reconstructed_tour_list= []
