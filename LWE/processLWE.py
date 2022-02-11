@@ -4,7 +4,7 @@
 import numpy as np
 import pandas as pd
 import csv
-import LWE_classes
+# import LWE_classes
 
 
 def get_survey_dict(LWE_TRANSPORT_csv):
